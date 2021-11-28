@@ -1,8 +1,9 @@
 <template>
   <div class="container-fluid">
-    <modal :info="selectedProduct" v-if="modal"
-           @close="modal = false"
-           @buy="addProducts"
+    <Modal
+      :info="selectedProduct" v-if="modal"
+      @close="modal = false"
+      @buy="addProducts"
     />
     <el-row :gutter="20">
       <el-col :span="6">
@@ -14,8 +15,8 @@
           </div>
         </div>
       </el-col>
-      <loader v-if="loader"/>
-      <el-col :span="18" v-else style="display:flex;flex-direction: column">
+      <Loader v-if="loader"/>
+      <el-col :span="18" v-else style="display: flex; flex-direction: column">
         <span id="category-title">{{ selectedCategory.title || '' }}</span>
         <div id="sort-wrap">
           <div class="sort-item" id="sort-price-wrap" @click="changeSortState('price')">
@@ -28,15 +29,19 @@
           </div>
         </div>
         <div id="subcategories-wrap">
-          <div :class="selectedSubcategory === item ? 'subcategories-item-selected' : 'subcategories-item'"
-               v-for="item in subcategories" :key="item.id"
-               @click="changeSubcategory(item)">
-            {{ item.title }}
-          </div>
+          <div
+            :class="selectedSubcategory === item ? 'subcategories-item-selected' : 'subcategories-item'"
+            v-for="item in subcategories" :key="item.id"
+            @click="changeSubcategory(item)"
+            v-html="item.title"
+          />
         </div>
         <div class="products-wrap">
-          <product-card v-for="card in filteredProducts" :key="card.id" :card-prop="card"
-                        @click="showProductInfo(card)"/>
+          <product-card
+            v-for="card in filteredProducts"
+            :key="card.id" :card-prop="card"
+            @click="showProductInfo(card)"
+          />
         </div>
       </el-col>
     </el-row>
@@ -44,19 +49,18 @@
 </template>
 
 <script>
-import Modal from "../components/Modal";
-import $ from 'jquery'
-import ProductCard from "../components/ProductCard";
-import Loader from "../components/Loader";
+import Modal from "./components/Modal";
+import ProductCard from "./components/ProductCard";
+import Loader from "./components/Loader";
 export default {
   name: 'App',
   components: {Modal, ProductCard, Loader},
   data() {
     return {
       test: true,
-      MY_PORTAL_DOMAIN: 'https://bitrix.ritual59.ru',
-      IBLOCK_ID: null,
-      IBLOCK_SECTION_ID: null,
+      PORTAL_DOMAIN: 'https://bitrix.ritual59.ru',
+      IBLOCK_ID: 1,
+      IBLOCK_SECTION_ID: 1,
       loader: false,
       modal: false,
       categories: [],
@@ -65,7 +69,6 @@ export default {
       selectedSubcategory: {},
       selectedProduct: {},
       products: [],
-
       filteredProducts: [],
       sort: {
         priceSort: null,
@@ -74,41 +77,42 @@ export default {
     }
   },
   mounted() {
-    // for (let i = 0;i < 87;i++) {
-    //   this.filteredProducts.push({
-    //     id: i,
-    //     title: `Test ${i}`,
-    //     categoryId: 1,
-    //     subcategoryId: 1,
-    //     fullPrice: 10000 * Math.random(),
-    //     stockPrice: 10000 * Math.random(),
-    //     article: `Артикул: ${i}`,
-    //     imgUrl: this.MY_PORTAL_DOMAIN
-    //   })
-    // }
-    this.IBLOCK_ID = $('#services-iblock-id').val()
-    this.IBLOCK_SECTION_ID = $('#services-iblock-section-id').val()
-    this.init()
-  },
-  computed: {
-    pageLength() {
-      return this.filteredProducts.length
-    },
-    pageSize() {
-      let num = this.filteredProducts.length
-      let iter = num % 2 ? 5 : 6
-      if (num <= iter) return 1
-      for (iter; iter < num; iter += 2) {
-        if (num % iter === 0) break
+    for (let i = 0; i < 24; i++) {
+      const product = {
+        id: i + 1,
+        title: `Товар ${i + 1}`,
+        categoryId: parseInt(Math.random() * 100 % 3 + 1),
+        subcategoryId: parseInt(Math.random() * 100 % 3 + 1),
+        fullPrice: +(Math.random() * 10_000).toFixed(2),
+        stockPrice: +(Math.random() * 10_000).toFixed(2),
+        imgUrl: require('./assets/empty.png'),
+        article: `Артикул: ${i}`,
       }
-      console.log(iter, 'pageSize')
-      return iter
+      this.filteredProducts.push(product)
+      this.products.push(product)
     }
+    this.categories = [
+      {id: 1, title: 'Категория1', checked: true},
+      {id: 2, title: 'Категория2', checked: false},
+      {id: 3, title: 'Категория3', checked: false},
+    ]
+    this.subcategories = [
+      {id: 1, title: 'Все'},
+      {id: 2, title: 'Подкатегория1'},
+      {id: 3, title: 'Подкатегория2'}
+    ]
+    this.selectedCategory = this.categories[0]
+    this.selectedSubcategory = this.subcategories[0]
+    this.init()
   },
   methods: {
     async init() {
-      await this.getSections()
-      await this.getProducts(this.selectedCategory.id)
+      // Методы для получения категорий товаров и самих товаров
+      // Для работы с API используются встроенные битриксовые методы
+
+      // await this.getSections()
+      // await this.getProducts(this.selectedCategory.id)
+
       this.loader = false
     },
 
@@ -119,71 +123,57 @@ export default {
         BX.ajax.runComponentAction(component, action, {
           mode: 'class',
           data: properties,
-        }).then(function (response) {
-          resolve(response)
-        }, function (error) {
-          reject(error)
-        });
+        }).then(response => resolve(response), error => reject(error));
       })
     },
     async getSections() {
-      await this.callB24AjaxMethod('webmens:services.deal', 'getSections', {
+      await this.callB24AjaxMethod('webmens:shop.deal', 'getSections', {
         sectionId: this.IBLOCK_SECTION_ID,
         iblockId: this.IBLOCK_ID
       }).then(response => {
-        let entries = Object.entries(response.data)
-        this.categories = []
-        entries.forEach(item => {
-          this.categories.push({id: parseInt(item[0]), title: item[1], checked: false})
-        }, this)
+        // Данные с бэка приходили в таком виде: [{1: 'Категория1'}, {2: 'Категория2'}]
+        // Поэтому пришлось их вот так некрасиво парсить
+        const entries = Object.entries(response.data)
+        this.categories = entries.map(([id, title]) => ({id: parseInt(id), title, checked: false}))
         this.categories[0].checked = true;
         this.selectedCategory = this.categories[0];
       })
     },
     async getProducts(categoryId) {
-      await this.callB24AjaxMethod('webmens:services.deal', 'getProducts', {
+      await this.callB24AjaxMethod('webmens:shop.deal', 'getProducts', {
         sectionId: categoryId,
         iblockId: this.IBLOCK_ID
-      })
-          .then(response => {
-            this.products = [];
-            this.filteredProducts = [];
-            response.data.products.forEach(item => {
-              let products = {
-                id: parseInt(item.ID),
-                isAuto: Boolean(item['PROPERTY_AUTO_VALUE']),
-                title: item.NAME,
-                categoryId: parseInt(item.IBLOCK_SECTION_ID),
-                subcategoryId: parseInt(item[response.data.mainPropertyName]),
-                fullPrice: parseInt(item.CATALOG_PRICE_1).toLocaleString(),
-                stockPrice: parseInt(item.CATALOG_PRICE_2).toLocaleString(),
-                comment: '',
-                article: item.PROPERTY_ARTICUL_VALUE,
-                imgUrl: this.MY_PORTAL_DOMAIN + (item.img ? item.img : '/local/templates/.default/vue/src/assets/empty.png')
-              }
-              this.products.push(products)
-              this.filteredProducts.push(products)
-            }, this)
-
-            console.log(this.products, 'ready products')
-
-            let subcatEntries = Object.entries(response.data.mainProperty)
-            this.subcategories = [{id: 1, title: 'Все'}]
-            this.selectedSubcategory = this.subcategories[0]
-            subcatEntries.forEach(item => {
-              this.subcategories.push({id: parseInt(item[0]), title: item[1]})
-            }, this)
-
-            console.log(this.subcategories, 'ready subcategories')
-
-          }).catch(error => console.error(error))
+      }).then(response => {
+        const data = response.data.products
+        // С системными именами битрикса работать не очень удобно
+        // Поэтому беребираю все данные, меняю ключи и беру только необходимые данные
+        this.filteredProducts = this.products = data.map(item => {
+          return {
+            id: parseInt(item.ID),
+            title: item.NAME,
+            isAuto: false,
+            categoryId: parseInt(item.IBLOCK_SECTION_ID),
+            subcategoryId: parseInt(item[response.data.mainPropertyName]),
+            fullPrice: parseInt(item.CATALOG_PRICE_1).toLocaleString(),
+            stockPrice: parseInt(item.CATALOG_PRICE_2).toLocaleString(),
+            comment: '',
+            article: item.PROPERTY_ARTICUL_VALUE,
+            imgUrl: this.PORTAL_DOMAIN + (item.img ? item.img : '/local/templates/.default/vue/src/assets/empty.png')
+          }
+        })
+        const subcatEntries = Object.entries(response.data.mainProperty)
+        this.subcategories = this.selectedSubcategory = [{id: 1, title: 'Все'}]
+        subcatEntries.forEach(item => {
+          this.subcategories.push({id: parseInt(item[0]), title: item[1]})
+        }, this)
+      }).catch(error => console.error(error))
     },
     async addProducts(product) {
       // eslint-disable-next-line no-undef
-      await this.callB24AjaxMethod('webmens:services.deal', 'addProduct', Object.assign({dealId: deal.entity_id}, product)).then(() => {
+      await this.callB24AjaxMethod('webmens:shop.deal', 'addProduct', Object.assign({dealId: deal.entity_id}, product)).then(() => {
         // eslint-disable-next-line no-undef
         BX.Crm.EntityEditor.defaultInstance.reload()
-        this.modal = false;
+        this.modal = false
       }).catch(error => {
         console.error(error)
         alert('Произошла ошибка при добавлении товара');
@@ -195,7 +185,7 @@ export default {
       this.loader = true
       item.checked = true
       this.selectedCategory = item
-      await this.getProducts(item.id)
+      // await this.getProducts(item.id)
       this.loader = false
     },
     changeSubcategory(subcat) {
@@ -258,6 +248,11 @@ export default {
 </script>
 
 <style>
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: #eef2f4;
+}
 .grid {
   display: grid;
   grid-gap: 20px;
@@ -272,12 +267,13 @@ export default {
   font-family: OpenSans-Regular;
   src: url("/local/components/webmens/shop.deal/templates/.default/vue/assets/opensans.ttf");
 }
-div#workarea-content, div#shop, div#services {
+div#workarea-content, div#shop {
   /*background-color: #f9f9fb;*/
   font-family: OpenSans-Regular,sans-serif;
   box-sizing: border-box;
   color: #41456c;
   font-size: 16px;
+  margin: 0 5%;
 }
 
 div.workarea-content-paddings {
